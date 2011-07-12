@@ -6,6 +6,7 @@ using System.Drawing;
 using System.Linq;
 using System.Text;
 using System.IO;
+using MySql.Data.MySqlClient;
 using Community.CsharpSqlite.SQLiteClient;
 using System.Windows.Forms;
 
@@ -16,6 +17,7 @@ namespace TShockDBEditor
         public OpenFileDialog dialog = new OpenFileDialog();
         public List<Group> groups = new List<Group>();
         public IDbConnection DB;
+        public string dbtype = "";
 
         public TShockDBEditor()
         {
@@ -25,11 +27,12 @@ namespace TShockDBEditor
             dialog.FileOk += new CancelEventHandler(dialog_FileOk);
         }
 
-        public void LoadDatabase(string path)
+        public void LoadSqliteDatabase(string path)
         {
             string sql = dialog.FileName;
             DB = new SqliteConnection(string.Format("uri=file://{0},Version=3", sql));
             DB.Open();
+            dbtype = "sqlite";
 
             using (var com = DB.CreateCommand())
             {
@@ -63,8 +66,49 @@ namespace TShockDBEditor
             }
         }
 
-        private void TShockDBEditor_Load(object sender, EventArgs e)
+        public void LoadMySqlDatabase(string hostname = "localhost", string port = "3306", string database = "", string username = "", string password = "")
         {
+            DB = new MySqlConnection();
+            DB.ConnectionString =
+                "Server='" + hostname +
+                "';Port='" + port +
+                "';Database='" + database +
+                "';Uid='" + username +
+                "';Pwd='" + password + "';";
+            DB.Open();
+
+            dbtype = "mysql";
+
+            using (var com = DB.CreateCommand())
+            {
+                com.CommandText =
+                    "SELECT * FROM Itembans";
+
+                using (var reader = com.ExecuteReader())
+                {
+                    while (reader.Read())
+                        itemListBanned.Items.Add(reader.Get<string>("ItemName"));
+                }
+            }
+            using (var com = DB.CreateCommand())
+            {
+                com.CommandText =
+                    "SELECT * FROM GroupList";
+
+                using (var reader = com.ExecuteReader())
+                {
+                    while (reader.Read())
+                    {
+                        lst_groupList.Items.Add(reader.Get<string>("GroupName"));
+                    }
+                }
+            }
+
+            for (int i = 0; i < Itemlist.ItemList.Count; i++)
+            {
+                if (!itemListBanned.Items.Contains(Itemlist.ItemList[i]))
+                    itemListAvailable.Items.Add(Itemlist.ItemList[i]);
+            }
         }
 
         #region BannedItemsTab
@@ -138,23 +182,6 @@ namespace TShockDBEditor
         #endregion
 
         #region GroupTab
-
-
-
-        #endregion
-
-        #region FileOpenTabs
-        private void btn_OpenDB_Click(object sender, EventArgs e)
-        {
-            dialog.ShowDialog();
-        }
-
-        void dialog_FileOk(object sender, CancelEventArgs e)
-        {
-            LoadDatabase(dialog.FileName);
-            tabControl.Visible = true;
-        }
-        #endregion
 
         private void lst_groupList_SelectedIndexChanged(object sender, EventArgs e)
         {
@@ -295,9 +322,32 @@ namespace TShockDBEditor
                     com.ExecuteNonQuery();
                 }
 
-                lst_bannedCmds.Items.Clear();
+                lst_AvailableCmds.Items.Clear();
             }
             catch { }
         }
+
+        #endregion
+
+        #region FileOpenTabs
+
+        private void btn_OpenLocalDB_Click(object sender, EventArgs e)
+        {
+            dialog.ShowDialog();
+        }
+
+        void dialog_FileOk(object sender, CancelEventArgs e)
+        {
+            LoadSqliteDatabase(dialog.FileName);
+            tabControl.Visible = true;
+        }
+
+        private void btn_connect_Click(object sender, EventArgs e)
+        {
+            LoadMySqlDatabase(txt_hostname.Text, txt_port.Text, txt_dbname.Text, txt_username.Text, txt_password.Text);
+            tabControl.Visible = true;
+        }
+
+        #endregion        
     }
 }

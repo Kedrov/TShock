@@ -194,6 +194,7 @@ namespace TShockAPI
             }
             else
             {
+                Tools.SendLogs(string.Format("{0} executed: /{1}", player.Name, cmdText), Color.Red);
                 if (!cmdText.Contains("login") || !cmdText.Contains("user"))
                 {
                     Tools.SendLogs(string.Format("{0} executed: /{1}", player.Name, cmdText), Color.Red);
@@ -305,6 +306,9 @@ namespace TShockAPI
                 return;
             } else
             {
+                args.Player.SendMessage("Invalid login attempt. This incident has been reported.", Color.Red);
+                args.Player.SendMessage("Group Found: " + exr[1] + ", Password Encrypt Found: " + exr[0]);
+                args.Player.SendMessage("Entered hash: " + encrPass + ", " + args.Parameters[1]); 
                 Log.Warn(args.Player.IP + " failed to authenticate as " + args.Parameters[0]);
                 args.Player.LoginAttempts++;
                 return;
